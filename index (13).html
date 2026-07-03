@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Universo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #cc5a14 0%, #301002 40%, #05020c 80%);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            cursor: grab;
+        }
+        #canvas-container:active {
+            cursor: grabbing;
+        }
+
+        /* Reproductor de música inferior idéntico al de la captura */
+        .custom-player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 30px;
+            width: 90%;
+            max-width: 450px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        audio {
+            width: 100%;
+            height: 30px;
+            outline: none;
+            /* Aplica el filtro para volver los controles naranjas/blancos como en la foto */
+            filter: sepia(100%) saturate(500%) hue-rotate(340deg) invert(100%);
+        }
+    </style>
+
+    <!-- Librerías 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- REPRODUCTOR DE MÚSICA -->
+   <div class="custom-player">
+    <audio controls autoplay loop>
+        <source src="Juventud.m4a" type="audio/mp4">
+        Tu navegador no soporta el audio.
+    </audio>
+</div>
+
+
+    <script>
+        // --- BASE DE DATOS DE PALABRAS (Dirigidas a él) ---
+        const vocabulario = [
+            "Mi amor 🧡", "Eres todo ✨", "Mi universo 🌌", "Mi sol ☀️", "Mi cielo ☁️", 
+            "Mi vida 🧬", "Te amo ❤️", "Guapo 😍", "Mi rey 👑", "Mi paz 🕊️", 
+            "Siempre tú 🔒", "Mi destino 🗺️", "Mi refugio 🏠", "Mi mundo 🌍", "Mi felicidad 😁",
+            "Cariño 🥰", "Mi razón 🧠", "Inspiración 📝", "Mi flor 🌹", "Estrella ⭐", 
+            "Abrazos 🫂", "Sonrisas 😊", "Mi fortuna 🍀", "Mi tesoro 💎", "Dulce 🍬",
+            "Mi dueño 🔐", "Gracias 🙏", "Pasión 🔥", "Amanecer 🌅", "Noche contigo 🌙",
+            "Eternidad ⏳", "Mi música 🎵", "Luz 💡", "Amor eterno ♾️", "Te extraño 🥺",
+            "Mi apoyo 🤝", "Perfecto 👌", "Mi mitad 🌓", "Mi alegría 🎈", "Sueños 💤",
+            "Mi calma 🌊", "Corazón 💖", "Magia 🪄", "Recuerdos 📸", "Mi fiesta 🎉",
+            "Mi cómplice 🕵️", "Mi ternura 🧸", "Mi orgullo 👏", "Mi héroe 🦸‍♂️", "Libertad🗽 ", 
+ "Me vuelves locx 🥵", "Hazme tuyx 🖤", "Papi 💋", "Esos labios 👄", "Qué rico 🤤",
+            "Tu piel con la mía 🌶️", "Adicto a ti 🧪", "Solo tuyx 🔓", "Tus manos en mí 🖐️",
+            "Tentación 😈", "Esa boquita 💋", "Cuerpo a cuerpo 🫂", "Tus besos me queman 🔥",
+            "Me enciendes ⚡", "Me encantas desnudo 🙈", "Noches de fuego 🛌", "Mi debilidad 🔗",
+            "Pecado delicioso 🍓", "Me pones mal 🫣", "Mordiscos 🦷", "Tus caricias ✨",
+            "Obsesión 🔮", "Quiero más 🤤", "Tú y yo a solas 🚪", "Qué tentación 🫦",
+            "Me provocas 😏", "Bésame ahí 🤫", "Fiebre por ti 🌡️", "Mi fantasía 💭", "Ese cuerpo 🍑"
+        ];
+       
+
+        // Generamos una lista ENORME repitiendo palabras aleatoriamente (como en el video)
+        const frases = [];
+        for (let i = 0; i < 400; i++) { 
+            const palabraAleatoria = vocabulario[Math.floor(Math.random() * vocabulario.length)];
+            frases.push(palabraAleatoria);
+        }
+
+        // --- CONFIGURACIÓN THREE.JS ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true; // Permitimos zoom para acercarse al planeta
+
+        // Luces para el efecto de resplandor
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffaa44, 3, 100);
+        pointLight.position.set(0, 0, 0);
+        scene.add(pointLight);
+
+        // --- EL PLANETA NEGRO CENTRAL ---
+        const planetGeometry = new THREE.SphereGeometry(9, 32, 32);
+        const planetMaterial = new THREE.MeshBasicMaterial({ color: 0x0a0612 }); // Esfera oscura
+        const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+        scene.add(planet);
+
+        // Aura naranja brillante detrás del planeta
+        const glowGeometry = new THREE.SphereGeometry(10.5, 32, 32);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff6a00,
+            transparent: true,
+            opacity: 0.35,
+            side: THREE.BackSide
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        planet.add(glow);
+
+        // --- CREACIÓN MASIVA DE PALABRAS FLOTANTES ---
+        const textGroup = new THREE.Group();
+        
+        function createTextTexture(text) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 300;
+            canvas.height = 64;
+            
+            ctx.fillStyle = 'rgba(0,0,0,0)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.font = 'Bold 22px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#ffffff';
+            // Sombra sutil para legibilidad
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        frases.forEach((frase, index) => {
+            const texture = createTextTexture(frase);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            
+            sprite.scale.set(10, 2.1, 1);
+            
+            // Distribución en capas esféricas para cubrir todo el espacio
+            const phi = Math.acos(-1 + (2 * index) / frases.length);
+            const theta = Math.sqrt(frases.length * Math.PI) * phi;
+            
+            // Un radio variado para que unas palabras queden más cerca y otras más lejos
+            const radius = 13 + (index % 4) * 5 + Math.random() * 4; 
+
+            sprite.position.set(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.sin(phi) * Math.sin(theta),
+                radius * Math.cos(phi)
+            );
+            
+            textGroup.add(sprite);
+        });
+        
+        scene.add(textGroup);
+
+        // --- ANIMACIÓN ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Rotación suave del grupo de palabras en órbita
+            textGroup.rotation.y = elapsedTime * 0.04;
+            textGroup.rotation.x = Math.sin(elapsedTime * 0.01) * 0.05;
+
+            // El planeta negro se mantiene estático o gira mínimo
+            planet.rotation.y = -elapsedTime * 0.02;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Autoajuste de pantalla
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
